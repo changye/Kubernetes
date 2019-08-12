@@ -1,0 +1,27 @@
+#!/bin/bash
+
+echo '{"registry-mirrors":["https://d7ekl3c3.mirror.aliyuncs.com"]}'  >  /etc/docker/daemon.json
+systemctl daemon-reload
+systemctl restart docker
+
+
+kubeadm config print init-defaults > init-config.yaml
+sed -i "s/imageRepository.*$/imageRepository: registry.cn-hangzhou.aliyuncs.com\/google_containers/" init-config.yaml 
+kubeadm config images pull --config init-config.yaml
+
+#CIDR=10.244.0.0/16
+#MASTER_IP=192.168.31.100
+#kubeadm init --pod-network-cidr=$CIDR --apiserver-advertise-address=$MASTER_IP
+kubeadm init --config=init-config.yaml
+
+#kubeadm init --pod-network-cidr=10.10.0.0/16 --apiserver-advertise-address=192.168.31.100 --image-repository registry.cn-hangzhou.aliyuncs.com/google_containers
+
+if [[ $? == 0]]
+then
+	mkdir -p $HOME/.kube
+  	sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  	sudo chown $(id -u):$(id -g) $HOME/.kube/config
+fi
+
+
+kubectl apply -f "http://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"

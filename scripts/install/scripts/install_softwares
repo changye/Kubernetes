@@ -1,0 +1,29 @@
+sudo swapoff -a
+sudo cp /etc/fstab /etc/fstab.bk
+sudo sed -i '/swap/ s/^\(.*\)$/#\1/g' /etc/fstab
+sudo echo "vm.swappiness=0" | sudo tee --append /etc/sysctl.conf
+sudo sysctl -p
+
+# install latest docker-ce
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+#sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+#sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+sudo curl -fsSL https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/ubuntu bionic stable"
+sudo apt-get update
+sudo apt-get install -y docker-ce
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# install kubernetes
+sudo curl -s https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | apt-key add -
+echo 'deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-get install -y keepalived
+sudo systemctl enable keepalived && sudo systemctl start keepalived
+sysctl net.bridge.bridge-nf-call-iptables=1
+
+tac  /etc/systemd/system/kubelet.service.d/10-kubeadm.conf | sed "0,/Environment=/{s/\(Environment=.*$\)/Environment=\"cgroup-driver=systemd\/cgroup-driver=cgroupfs\"\n\1/}" | tac | tee  /etc/systemd/system/kubelet.service.d/10-kubeadm.conf

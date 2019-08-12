@@ -1,0 +1,141 @@
+#!/bin/bash
+
+clusterinit(){
+        # Check if .nodelist exist.
+        if [[ -e "./.nodelist" ]]
+        then
+                echo "The cluster has been initialized."
+                echo "If you want to initilize it again, remove the '.nodelist' file first!"
+                exit 1
+        else
+                # Create node list file.
+                touch .nodelist
+                echo "Cluster node list file created!"
+                exit 0
+
+        fi
+}
+
+
+addnode(){
+	host=$1
+	username=$3
+	ip=$2
+
+	# Add node infomation to /etc/hosts (local)
+        echo "Adding $host($ip) to /etc/hosts"
+
+        # TODO: Check if there is a conflict
+
+	# If no conflict, add host into /etc/hosts
+        sudo sh -c "echo $ip $host >> /etc/hosts"
+
+
+	# Copy SSH key to this node. Permit login in without password.
+	echo "Copying ssh public key to $host"
+	ssh-keygen -f ~/.ssh/known_hosts -R "$ip"
+	ssh-keygen -f ~/.ssh/known_hosts -R "$host"
+	ssh-copy-id -o StrictHostKeyChecking=no $username@$ip
+
+	if [[ $? -eq 0 ]] 
+	then
+		echo "Successfully copy ssh public key to $host"
+	else
+		echo "Some thing must be wrong."
+	        echo "If you do not have a ssh public key, run \"ssh-keygen -t rsa\" first."
+	 	echo "If you already have a ssh public key, please check your host ip and username!"
+		exit 1
+	fi
+
+	# copy scripts to host to open the root access permission by password.
+        scp ./scripts/open_root_access $username@$ip:~/. 
+	ssh -t $username@$ip "sudo ~/open_root_access"
+
+	echo "root password on host $host has been change to 'passwd4host' temporarily."
+	echo "You will be use this password later."
+	
+	# Copy ssh public key to root account.
+	ssh-copy-id -o StrictHostKeyChecking=no root@$ip
+
+	# Close root access permission by password.
+	echo "Closing root access."
+	scp ./scripts/close_root_access root@$ip:/root/.
+	ssh -t root@$ip "source /root/close_root_access"
+
+	# Install softwares
+	echo "Install softwares in $host($ip)"
+	scp ./scripts/install_softwares root@$ip:/root/.
+	ssh -t root@$ip "/root/install_softwares"
+
+	# TODO: Test if software is suceesfully installed on target host.
+	# If not, remove the host information from /etc/hosts
+
+
+	# Add node information to all existing node's /etc/hosts.
+	while read line
+	do
+		# Remove comment and blank line.
+		if [[ ! "$line" =~ ^\s*#.*|^$|^\s+$ ]]
+		then
+        		node_host=$(echo $line | awk '{print $2}')
+        		node_ip=$(echo $line | awk '{print $1}')
+
+			# Add new node to existing node
+			echo "Adding $host to $node_host..."
+			# Must add -n, or this loop will do only once
+			ssh -n root@$node_ip "echo $ip $host >> /etc/hosts"
+			
+			# Add existing node to new node
+			echo "Adding $node_host to $host..."
+			# Must add -n, or this loop will do only once
+			ssh -n root@$ip "echo $node_ip $node_host >> /etc/hosts"
+		fi
+	done < .nodelist
+
+	# Add node information to itself.
+	ssh root@$ip "echo $ip $host >> /etc/hosts"
+
+	# Add node to node list
+	echo $ip $host >> .nodelist
+
+
+}
+
+# This command will prepare to create a cluster. It will create a host list.
+if [[ $1 = "init" ]]
+then
+	echo "Start initialize the Kubernetes Cluster"
+	clusterinit
+
+# This command will add a host to the cluster.
+elif [[ $1 = "add" ]]
+then
+	# Verify the input arguments.
+	if [ -z $2 ]
+	then
+		echo "Please enter the host name of the node!"
+		echo "example: kubecluster add hostname 192.168.1.1 username"
+		exit 1
+	fi
+	if [ -z $3 ]
+	then
+		echo "Please enter the ip of the node!"
+		echo "example: kubecluster add hostname 192.168.1.1 username"
+		exit 1
+	fi
+	if [ -e $4 ]
+	then
+		echo "Please enter the username of the node!"
+                echo "example: kubecluster add hostname 192.168.1.1 username"
+                exit 1
+	fi
+
+	# Check if this cluster has been initialized. (Check .nodelist existance)
+	if [[ ! -e "./.nodelist" ]]
+	then
+		echo "The cluster has not been initialised, please run \"kubecluster init\" first"
+	else
+		echo "Adding host $2($3) to the cluster."
+		addnode $2 $3 $4
+	fi
+fi

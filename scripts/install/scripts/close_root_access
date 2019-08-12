@@ -1,0 +1,2 @@
+sed -i '$ d' /etc/ssh/sshd_config
+service ssh restart
