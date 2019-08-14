@@ -9,6 +9,8 @@ kubeadm config print init-defaults > init-config.yaml
 sed -i "s/imageRepository.*$/imageRepository: registry.cn-hangzhou.aliyuncs.com\/google_containers/" init-config.yaml 
 kubeadm config images pull --config init-config.yaml
 
+kubeadm init --pod-network-cidr=192.168.0.0/16 --apiserver-advertise-address=192.168.1.44 --image-repository=registry.aliyuncs.com/google_containers
+
 #CIDR=10.244.0.0/16
 #MASTER_IP=192.168.31.100
 #kubeadm init --pod-network-cidr=$CIDR --apiserver-advertise-address=$MASTER_IP
@@ -25,3 +27,11 @@ fi
 
 
 kubectl apply -f "http://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+
+#flannel
+#kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/a70459be0084506e4ec919aa1c114638878db11b/Documentation/kube-flannel.yml
+
+
+# Install Kubernetes Dashboard UI
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta1/aio/deploy/recommended.yaml

@@ -26,4 +26,8 @@ sudo apt-get install -y keepalived
 sudo systemctl enable keepalived && sudo systemctl start keepalived
 sysctl net.bridge.bridge-nf-call-iptables=1
 
+sudo cp /etc/systemd/system/kubelet.service.d/10-kubeadm.conf /etc/systemd/system/kubelet.service.d/10-kubeadm.conf.bk
+
 tac  /etc/systemd/system/kubelet.service.d/10-kubeadm.conf | sed "0,/Environment=/{s/\(Environment=.*$\)/Environment=\"cgroup-driver=systemd\/cgroup-driver=cgroupfs\"\n\1/}" | tac | tee  /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+sleep 2
