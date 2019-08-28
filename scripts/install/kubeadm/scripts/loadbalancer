@@ -1,0 +1,35 @@
+#!bin/bash
+
+LB_IP=192.168.220.100
+LB_PORT=6443
+
+MASTER0_NAME=master0
+MASTER0_IP=192.168.220.10
+MASTER0_PORT=6443
+
+MASTER1_NAME=master1
+MASTER1_IP=192.168.220.11
+MASTER1_PORT=6443
+
+# install haproxy
+sudo apt-get update
+sudo apt install -y haproxy
+cat << EOF > temp
+frontend kubernetes
+        bind    192.168.220.100:6443
+        option  tcplog
+        mode    tcp
+        default_backend kubernetes-master-nodes
+
+backend kubernetes-master-nodes
+mode    tcp
+balance roundrobin
+option  tcp-check
+server  ${MASTER0_NAME} ${MASTER0_IP}:${MASTER0_PORT} check fall 3 rise 2
+server  ${MASTER1_NAME} ${MASTER1_IP}:${MASTER1_PORT} check fall 3 rise 2
+EOF
+
+less temp >> /etc/haproxy/haproxy.cfg
+
+sudo systemctl daemon-reload
+sudo systemctl restart haproxy

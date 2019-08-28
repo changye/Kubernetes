@@ -1,9 +1,5 @@
 #!/bin/bash
 
-echo '{"registry-mirrors":["https://d7ekl3c3.mirror.aliyuncs.com"]}'  >  /etc/docker/daemon.json
-systemctl daemon-reload
-systemctl restart docker
-
 
 kubeadm config print init-defaults > init-config.yaml
 sed -i "s/imageRepository.*$/imageRepository: registry.cn-hangzhou.aliyuncs.com\/google_containers/" init-config.yaml 

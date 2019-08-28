@@ -13,6 +13,8 @@ sudo curl -fsSL https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/ubuntu/gpg 
 sudo add-apt-repository "deb [arch=amd64] https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/ubuntu bionic stable"
 sudo apt-get update
 sudo apt-get install -y docker-ce
+echo '{"registry-mirrors":["https://d7ekl3c3.mirror.aliyuncs.com"]}'  >  /etc/docker/daemon.json
+sudo systemctl daemon-reload
 sudo systemctl start docker
 sudo systemctl enable docker
 
