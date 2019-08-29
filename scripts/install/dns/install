@@ -1,0 +1,2 @@
+# http://www.damagehead.com/blog/2015/04/28/deploying-a-dns-server-using-docker/
+docker run -d --name=bind-dns --dns=192.168.1.1  -p=53:53/udp --publish=10000:10000 --volume=/home/vg/docker/bind:/data --env='ROOT_PASSWORD=123456' sameersbn/bind
